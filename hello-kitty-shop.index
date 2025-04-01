@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello Kitty Pool Shop — Antarctica</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: url('https://ru-static.z-dn.net/files/d74/d927c01a12e3b475a73325bf13d969f6.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Comic Sans MS', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            overflow-y: auto;
+            animation: discoLights 5s infinite;
+        }
+
+        @keyframes discoLights {
+            0% { background-color: rgba(255, 0, 255, 0.05); }
+            25% { background-color: rgba(0, 255, 255, 0.05); }
+            50% { background-color: rgba(255, 255, 0, 0.05); }
+            75% { background-color: rgba(0, 255, 0, 0.05); }
+            100% { background-color: rgba(255, 0, 0, 0.05); }
+        }
+
+        h1 {
+            color: #FF00FF;
+            text-shadow: 0 0 10px #00FFFF, 0 0 20px #FFFF00;
+            font-size: 2em;
+            margin: 10px 0;
+            animation: floatUpDown 2s ease-in-out infinite;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px;
+            border-radius: 10px;
+        }
+
+        @keyframes floatUpDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .product {
+            background: rgba(255, 255, 255, 0.9);
+            border: 10px double pink;
+            box-shadow: 0 0 30px 10px rgba(255, 0, 255, 0.5);
+            margin: 20px auto;
+            padding: 10px;
+            max-width: 300px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .product img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .product-name {
+            color: #FF00FF;
+            font-size: 1.2em;
+            margin: 5px 0;
+            text-shadow: 0 0 5px #00FFFF;
+        }
+
+        .product-price {
+            color: #00FF00;
+            font-size: 1.1em;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .actionButton {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #FF00FF, #00FFFF);
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 25px;
+            box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.5);
+            animation: pulse 2s infinite;
+            margin: 5px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .actionButton:hover {
+            background: linear-gradient(45deg, #FFFF00, #FF00FF);
+            animation: none;
+            transform: scale(1.1) rotate(3deg);
+        }
+
+        #cart {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: lime;
+            padding: 10px;
+            border: 2px dotted lime;
+            border-radius: 10px;
+            z-index: 100;
+        }
+
+        #hellCaptcha {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(45deg, #FF00FF, #FF00FF 10px, #00FFFF 10px, #00FFFF 20px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-10px, -10px) rotate(-5deg); }
+            20% { transform: translate(10px, -5px) rotate(5deg); }
+            30% { transform: translate(-15px, 0) rotate(-3deg); }
+            40% { transform: translate(5px, 10px) rotate(2deg); }
+            50% { transform: translate(-5px, -5px) rotate(-1deg); }
+            60% { transform: translate(15px, 0) rotate(4deg); }
+            70% { transform: translate(-10px, 5px) rotate(-2deg); }
+            80% { transform: translate(10px, -10px) rotate(3deg); }
+            90% { transform: translate(-5px, 5px) rotate(-4deg); }
+        }
+
+        .captcha-box {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 20px;
+            border: 5px dashed #FFFF00;
+            box-shadow: 0 0 50px 20px rgba(255, 255, 0, 0.5);
+            text-align: center;
+            max-width: 80%;
+            transform: rotate(3deg);
+            animation: shake 0.5s infinite;
+        }
+
+        .captcha-title {
+            color: #00FF00;
+            text-shadow: 0 0 10px #FF0000, 0 0 20px #0000FF;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            animation: colorChange 2s infinite;
+        }
+
+        @keyframes colorChange {
+            0% { color: #00FF00; }
+            25% { color: #FF00FF; }
+            50% { color: #FFFF00; }
+            75% { color: #00FFFF; }
+            100% { color: #FF0000; }
+        }
+
+        .captcha-text {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            transform: rotate(-2deg);
+        }
+
+        .captcha-image {
+            font-size: 40px;
+            letter-spacing: 10px;
+            margin: 20px 0;
+            color: #FFFF00;
+            background: #FF00FF;
+            padding: 15px;
+            border-radius: 5px;
+            transform: skewX(-15deg);
+            user-select: none;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .captcha-input {
+            padding: 15px;
+            font-size: 20px;
+            width: 80%;
+            margin: 20px 0;
+            border: 3px dotted #00FFFF;
+            background-color: #000;
+            color: #00FF00;
+            text-align: center;
+            transform: rotate(2deg);
+            transition: all 0.3s;
+        }
+
+        .captcha-input:focus {
+            outline: none;
+            border: 3px solid #FF00FF;
+            background-color: #111;
+            transform: rotate(-2deg) scale(1.1);
+        }
+
+        .captcha-button {
+            background: linear-gradient(45deg, #FF00FF, #00FFFF, #FFFF00);
+            color: black;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.5);
+            transform: rotate(5deg);
+        }
+
+        .captcha-button:hover {
+            background: linear-gradient(45deg, #FFFF00, #FF00FF, #00FFFF);
+            animation: none;
+            transform: rotate(0deg) scale(1.2);
+        }
+
+        .annoying-element {
+            position: absolute;
+            font-size: 30px;
+            animation: fly 10s linear infinite;
+            z-index: 10001;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        @keyframes fly {
+            0% { top: -50px; left: -50px; }
+            25% { top: -50px; left: calc(100% + 50px); }
+            50% { top: calc(100% + 50px); left: calc(100% + 50px); }
+            75% { top: calc(100% + 50px); left: -50px; }
+            100% { top: -50px; left: -50px; }
+        }
+
+        .audio-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10002;
+            background: #FF00FF;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .flyingCharacter {
+            position: absolute;
+            font-size: 20px;
+            z-index: 50;
+            user-select: none;
+            pointer-events: none;
+            text-shadow: 0 0 5px white;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="hellCaptcha">
+        <div class="annoying-element" style="top: 20%; left: 30%;">⚠️</div>
+        <div class="annoying-element" style="top: 70%; left: 10%;">❌</div>
+        <div class="annoying-element" style="top: 40%; left: 80%;">💩</div>
+        <div class="annoying-element" style="top: 80%; left: 60%;">😱</div>
+
+        <div class="captcha-box">
+            <h1 class="captcha-title">ДОКАЖИ, ЧТО ТЫ НЕ ПИНГВИН! 🐧</h1>
+            <div class="captcha-text">
+                Введите текст, который вы видите ниже (если сможете):
+            </div>
+            <div id="captchaVisual" class="captcha-image"></div>
+            <input type="text" id="captchaInput" class="captcha-input" placeholder="Введите текст с картинки">
+            <div>
+                <button id="verifyBtn" class="captcha-button">Проверить</button>
+                <button id="newCaptchaBtn" class="captcha-button">Новая капча</button>
+                <button id="audioCaptchaBtn" class="captcha-button">Аудио-пытка</button>
+            </div>
+            <div id="errorMsg" style="color: red; font-weight: bold; display: none;">
+                НЕВЕРНО! Попробуйте еще раз (или сдайтесь)
+            </div>
+        </div>
+
+        <audio id="captchaAudio" loop>
+            <source src="" type="audio/mpeg">
+        </audio>
+        <button id="audioControl" class="audio-control" title="Выключить звук">🔊</button>
+    </div>
+
+    <div id="mainContent" style="display: none;">
+        <h1>Hello Kitty Pool Shop</h1>
+        <div id="products"></div>
+        <div id="cart">Корзина: 0 rub</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const products = [
+            { id: 1, name: "Kitty Pool Mini", price: 999, image: "https://images.product-test.ru/sourceimages/208/103/382/85b50a92-552f-4678-ba36-6522f74ca303.jpg" },
+            { id: 2, name: "Kitty Pool Deluxe", price: 1499, image: "https://www.decjisajt.rs/files/images/2018/6/11/bazeni-i-oprema-intex-camac-hello-kitty-16321.jpg" },
+            { id: 3, name: "Kitty Pool Ultra", price: 1999, image: "https://krasnodar-intex.ru/wa-data/public/shop/products/17/18/1817/images/7615/7615.750x0.jpg" },
+            { id: 4, name: "Kitty Pool Penguin Edition", price: 1299, image: "https://images-eu.ssl-images-amazon.com/images/I/51Mj3drRSuL.jpg" },
+            { id: 5, name: "Kitty Pool Glitter", price: 1699, image: "https://cdn1.ozone.ru/s3/multimedia-6/6010921938.jpg" },
+            { id: 6, name: "Kitty Pool Ice Breaker", price: 1899, image: "https://static.cdek.shopping/images/shopping/kHTc3MmT92cZPMC3.jpg?v=1" },
+            { id: 7, name: "Kitty Pool Quantum", price: 2499, image: "https://cdn1.ozone.ru/multimedia/c600/1030745246.jpg" },
+            { id: 8, name: "Kitty Pool Antarctic Glow", price: 1599, image: "https://images-na.ssl-images-amazon.com/images/I/51GZhyc4oyL.jpg" },
+            { id: 9, name: "Kitty Pool Super Duper", price: 2999, image: "https://media.poco-home.com/i/poco/POXuBXjgPm1f9prjgW9XXo1A/?fmt=auto&%24dq%24=&w=600" },
+            { id: 10, name: "Kitty Pool VIP", price: 3999, image: "https://cdn.pandashop.md/i/?i=/i/products/37/378252.jpg&w=1220&h=1220" }
+        ];
+
+        let cart = [];
+        let currentCaptcha = generateEvilCaptcha();
+        let audioEnabled = true;
+
+        function generateEvilCaptcha() {
+            const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+            let captcha = "";
+            const length = 6 + Math.floor(Math.random() * 3);
+
+            for (let i = 0; i < length; i++) {
+                if (Math.random() < 0.3) {
+                    const similarGroups = ["0Oo", "1Il|", "2Zz", "5Ss", "8B", "9gq", "uv", "nm", "bdpq"];
+                    const group = similarGroups[Math.floor(Math.random() * similarGroups.length)];
+                    captcha += group.charAt(Math.floor(Math.random() * group.length));
+                } else {
+                    captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+            }
+            return captcha;
+        }
+
+        function displayCaptcha() {
+            const visual = document.getElementById("captchaVisual");
+            visual.innerHTML = "";
+
+            for (let i = 0; i < currentCaptcha.length; i++) {
+                const charSpan = document.createElement("span");
+                charSpan.textContent = currentCaptcha[i];
+                charSpan.style.display = "inline-block";
+                charSpan.style.transform = `rotate(${Math.random() * 20 - 10}deg) scale(${0.8 + Math.random() * 0.5}) skewX(${Math.random() * 20 - 10}deg)`;
+                charSpan.style.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                charSpan.style.textShadow = `0 0 ${Math.random() * 10}px white`;
+                charSpan.style.margin = `0 ${Math.random() * 10 - 5}px`;
+                charSpan.style.fontSize = `${30 + Math.random() * 20}px`;
+                charSpan.style.animation = `blink ${0.5 + Math.random() * 2}s infinite`;
+                visual.appendChild(charSpan);
+            }
+        }
+
+        function playAudioCaptcha() {
+            if (!audioEnabled) return;
+
+            const audio = document.getElementById("captchaAudio");
+            const synth = window.speechSynthesis;
+
+            synth.cancel();
+            audio.pause();
+
+            if (Math.random() > 0.5) {
+                const utterance = new SpeechSynthesisUtterance(currentCaptcha.split('').join(' '));
+                utterance.rate = 0.7 + Math.random() * 0.6;
+                utterance.pitch = 0.5 + Math.random();
+                utterance.volume = 1;
+
+                const voices = synth.getVoices();
+                if (voices.length > 0) {
+                    utterance.voice = voices[Math.floor(Math.random() * voices.length)];
+                }
+
+                synth.speak(utterance);
+            } else {
+                audio.src = "https://www.soundjay.com/buttons/sounds/beep-07.mp3";
+                audio.play();
+            }
+        }
+
+        function verifyCaptcha() {
+            const userInput = document.getElementById("captchaInput").value;
+            const errorMsg = document.getElementById("errorMsg");
+
+            if (userInput.toLowerCase() === currentCaptcha.toLowerCase()) {
+                document.getElementById("hellCaptcha").style.display = "none";
+                document.getElementById("mainContent").style.display = "block";
+                initializeShop();
+            } else {
+                errorMsg.style.display = "block";
+                document.getElementById("captchaInput").value = "";
+                currentCaptcha = generateEvilCaptcha();
+                displayCaptcha();
+                if (audioEnabled) playAudioCaptcha();
+            }
+        }
+
+        async function calculatePrice(basePrice) {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ units: 1000, inputShape: [1], activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 500, activation: 'tanh' }));
+            model.add(tf.layers.dense({ units: 1, activation: 'linear' }));
+            model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+            const xs = tf.tensor1d([1, 2, 3, 4, 5]);
+            const ys = tf.tensor1d([basePrice, basePrice * 1.5, basePrice * 2, basePrice * 2.5, basePrice * 3]);
+            await model.fit(xs, ys, { epochs: 10 });
+
+            let arr = Array(2000).fill().map(() => Math.random());
+            for (let i = 0; i < arr.length; i++) {
+                for (let j = 0; j < arr.length - 1 - i; j++) {
+                    if (arr[j] > arr[j + 1]) {
+                        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                    }
+                }
+            }
+
+            const prediction = model.predict(tf.tensor1d([Math.random()])).dataSync()[0];
+            return Math.abs(prediction) + basePrice + Math.random() * 100;
+        }
+
+        async function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            const finalPrice = await calculatePrice(product.price);
+            cart.push({ ...product, finalPrice });
+            updateCart();
+        }
+
+        function updateCart() {
+            const total = cart.reduce((sum, item) => sum + item.finalPrice, 0);
+            const cartDiv = document.getElementById("cart");
+            cartDiv.innerHTML = `Корзина: ${total.toFixed(2)} rub`;
+            if (cart.length > 0) {
+                const checkoutBtn = document.createElement("button");
+                checkoutBtn.className = "actionButton";
+                checkoutBtn.textContent = "Оформить заказ";
+                checkoutBtn.onclick = checkout;
+                cartDiv.appendChild(checkoutBtn);
+            }
+        }
+
+        function checkout() {
+            const total = cart.reduce((sum, item) => sum + item.finalPrice, 0);
+            const orderDetails = cart.map(item => `${item.name} - ${item.finalPrice.toFixed(2)} rub`).join('\n');
+            const message = `Ваш заказ:\n${orderDetails}\n\nИтого: ${total.toFixed(2)} rub\n\nПожалуйста, сделайте скриншот этого сообщения и отправьте его менеджеру @KittyPoolManager для подтверждения заказа!`;
+
+            tg.showPopup({
+                title: "Заказ оформлен",
+                message: message,
+                buttons: [
+                    { id: "ok", type: "ok", text: "ОК" }
+                ]
+            }, (btn) => {
+                if (btn === "ok") {
+                    tg.sendData(JSON.stringify({ action: "checkout", cart, total }));
+                    // Не закрываем Web App, чтобы пользователь мог сделать скриншот
+                }
+            });
+        }
+
+        function createFlyingCharacters() {
+            const characters = ["🐧", "🐱", "🏊", "❄️", "💎"];
+            for (let i = 0; i < 15; i++) {
+                const char = document.createElement("div");
+                char.className = "flyingCharacter";
+                char.textContent = characters[Math.floor(Math.random() * characters.length)];
+                char.style.left = `${Math.random() * 100}vw`;
+                char.style.top = `${Math.random() * 100}vh`;
+                char.style.animationDelay = `${Math.random() * 2}s`;
+                document.body.appendChild(char);
+            }
+        }
+
+        function initializeShop() {
+            const productsDiv = document.getElementById("products");
+            products.forEach(product => {
+                const div = document.createElement("div");
+                div.className = "product";
+                div.innerHTML = `
+                    <img src="${product.image}" alt="${product.name}">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-price">${product.price} rub</div>
+                    <button class="actionButton" onclick="addToCart(${product.id})">В корзину</button>
+                `;
+                productsDiv.appendChild(div);
+            });
+            createFlyingCharacters();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            displayCaptcha();
+
+            document.getElementById("verifyBtn").addEventListener("click", verifyCaptcha);
+            document.getElementById("newCaptchaBtn").addEventListener("click", () => {
+                currentCaptcha = generateEvilCaptcha();
+                displayCaptcha();
+                document.getElementById("errorMsg").style.display = "none";
+            });
+            document.getElementById("audioCaptchaBtn").addEventListener("click", playAudioCaptcha);
+            document.getElementById("captchaInput").addEventListener("keypress", (e) => {
+                if (e.key === "Enter") verifyCaptcha();
+            });
+
+            document.getElementById("audioControl").addEventListener("click", () => {
+                audioEnabled = !audioEnabled;
+                document.getElementById("audioControl").textContent = audioEnabled ? "🔊" : "🔇";
+                if (!audioEnabled) {
+                    const audio = document.getElementById("captchaAudio");
+                    audio.pause();
+                    window.speechSynthesis.cancel();
+                }
+            });
+
+            setTimeout(() => {
+                if (audioEnabled) playAudioCaptcha();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
